@@ -2,37 +2,44 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-# Load data
-df = pd.read_csv("../dataset/diabetes.csv")
-print("Original data:", df.shape)
+def preprocess_data():
+    # Load data
+    df = pd.read_csv("../dataset/diabetes.csv")
+    print("Original data:", df.shape)
 
-# Remove duplicates
-df = df.drop_duplicates()
-print("After removing duplicates:", df.shape)
+    # Remove duplicates
+    df = df.drop_duplicates()
+    print("After removing duplicates:", df.shape)
 
-# Convert output to binary
-df["Diabetes_012"] = df["Diabetes_012"].replace({0: 0, 1: 1, 2: 1})
-print("\nTarget value:")
-print(df["Diabetes_012"].value_counts())
+    # Convert target to binary
+    df["Diabetes_012"] = df["Diabetes_012"].replace({0: 0, 1: 1, 2: 1})
 
-# Separate features and target
-X = df.drop("Diabetes_012", axis=1)
-y = df["Diabetes_012"]
+    print("\nTarget values:")
+    print(df["Diabetes_012"].value_counts())
 
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10)
-print("\nTraining data:", X_train.shape)
-print("Testing data:", X_test.shape)
+    # Separate features and target
+    X = df.drop("Diabetes_012", axis=1)
+    y = df["Diabetes_012"]
 
-# Scale features that are non-binary
-features_to_scale = ["BMI", "GenHlth", "MentHlth", "PhysHlth", "Age", "Education", "Income"]
+    print("\nNumber of features:", X.shape[1])
 
-scaler = StandardScaler()
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-X_train[features_to_scale] = scaler.fit_transform(X_train[features_to_scale])
-X_test[features_to_scale] = scaler.transform(X_test[features_to_scale])
+    print("Training data:", X_train.shape)
+    print("Testing data:", X_test.shape)
 
-print("\nFeatures scaled:")
-print(features_to_scale)
+    # Scale selected features
+    features_to_scale = ["BMI", "GenHlth", "MentHlth", "PhysHlth", "Age", "Education", "Income"]
 
-print("\nPreprocessing complete!")
+    scaler = StandardScaler()
+
+    X_train[features_to_scale] = scaler.fit_transform(X_train[features_to_scale])
+    X_test[features_to_scale] = scaler.transform(X_test[features_to_scale])
+
+    print("\nFeatures scaled:")
+    print(features_to_scale)
+
+    print("\nPreprocessing complete!")
+
+    return X_train, X_test, y_train, y_test
