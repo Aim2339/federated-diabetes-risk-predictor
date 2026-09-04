@@ -1,0 +1,30 @@
+### Baseline MLP Results
+
+Model:
+Multilayer Perceptron (MLP)
+
+Architecture:
+21 → 64 → 32 → 1
+
+Optimizer:
+Adam
+
+Loss:
+Binary Cross-Entropy
+
+Epochs:
+10
+
+Batch Size:
+32
+
+Test Results:
+Accuracy: 0.8383053724
+Precision: 0.5887445887
+Recall: 0.1734472644
+F1-Score: 0.2679538962
+ROC-AUC: 0.8089394705
+
+Confusion Matrix:
+[[37166   950]
+ [ 6481  1360]]
