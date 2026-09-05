@@ -1,8 +1,11 @@
 from preprocessing import preprocess_data
-from model import model
+from model import create_model
 
 # Get preprocessed data
 X_train, X_test, y_train, y_test = preprocess_data()
+
+# Create model
+model = create_model()
 
 # Train the model
 model.fit(X_train, y_train, epochs=10, batch_size=32)
