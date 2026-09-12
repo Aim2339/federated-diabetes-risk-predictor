@@ -6,11 +6,11 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 X_train, X_test, y_train, y_test = preprocess_data()
 
 # Load the trained model
-model = load_model("../results/mlp_model.keras")
+model = load_model("../results/federated_model.keras")
 
 # Get predictions
 probabilities = model.predict(X_test)
-predictions = (probabilities >= 0.5).astype(int)
+predictions = (probabilities >= 0.4).astype(int)
 
 # Calculate metrics
 accuracy = accuracy_score(y_test, predictions)

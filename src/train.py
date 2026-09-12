@@ -11,7 +11,7 @@ model = create_model()
 model.fit(X_train, y_train, epochs=10, batch_size=32)
 
 # Save the trained model
-model.save("../results/mlp_model.keras")
+model.save("../results/baseline_model.keras")
 
 # Test the model
 loss, accuracy = model.evaluate(X_test, y_test)
