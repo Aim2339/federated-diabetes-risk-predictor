@@ -1,41 +1,303 @@
 import pandas as pd
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils import resample
 
-def preprocess_data():
-    # Load data
-    df = pd.read_csv("../dataset/diabetes.csv")
-    print("Original data:", df.shape)
 
-    # Remove duplicates
-    df = df.drop_duplicates()
-    print("After removing duplicates:", df.shape)
+def load_and_preprocess():
 
-    # Convert target to binary
-    df["Diabetes_012"] = df["Diabetes_012"].replace({0: 0, 1: 1, 2: 1})
-    print("\nTarget values:")
-    print(df["Diabetes_012"].value_counts())
+    # Load datasets
 
-    # Separate features and target
-    X = df.drop("Diabetes_012", axis=1)
-    y = df["Diabetes_012"]
-    print("\nNumber of features:", X.shape[1])
+    bangladesh = pd.read_csv("../dataset/diabetes_bangladesh.csv")
+    iraq = pd.read_csv("../dataset/diabetes_iraq.csv")
+    pima = pd.read_csv("../dataset/diabetes_pima.csv")
 
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    print("Training data:", X_train.shape)
-    print("Testing data:", X_test.shape)
+    print("Original dataset sizes:")
+    print("Bangladesh:", bangladesh.shape)
+    print("Iraq:", iraq.shape)
+    print("Pima:", pima.shape)
 
-    # Scale selected features
-    features_to_scale = ["BMI", "GenHlth", "MentHlth", "PhysHlth", "Age", "Education", "Income"]
 
-    scaler = StandardScaler()
-    X_train[features_to_scale] = scaler.fit_transform(X_train[features_to_scale])
-    X_test[features_to_scale] = scaler.transform(X_test[features_to_scale])
+    # Bangladesh
 
-    print("\nFeatures scaled:")
-    print(features_to_scale)
+    bangladesh = bangladesh[
+        ["age", "bmi", "systolic_bp", "glucose", "diabetic"]
+    ].copy()
 
-    print("\nPreprocessing complete!")
+    bangladesh.columns = [
+        "Age",
+        "BMI",
+        "BloodPressure",
+        "Glucose",
+        "Diabetes"
+    ]
 
-    return X_train, X_test, y_train, y_test
+    bangladesh["Diabetes"] = (
+        bangladesh["Diabetes"]
+        .str.lower()
+        .map({"yes": 1, "no": 0})
+    )
+
+
+    # Iraq
+
+    iraq["BloodPressure"] = (
+        iraq["BP"]
+        .astype(str)
+        .str.split("/")
+        .str[0]
+    )
+
+    iraq["BloodPressure"] = pd.to_numeric(
+        iraq["BloodPressure"],
+        errors="coerce"
+    )
+
+    iraq = iraq[
+        ["Age", "BMI", "BloodPressure", "RBS", "HbA1c"]
+    ].copy()
+
+    iraq.columns = [
+        "Age",
+        "BMI",
+        "BloodPressure",
+        "Glucose",
+        "HbA1c"
+    ]
+
+    iraq["Diabetes"] = (
+        iraq["HbA1c"] >= 6.5
+    ).astype(int)
+
+    iraq = iraq.dropna()
+
+    iraq = iraq[
+        [
+            "Age",
+            "BMI",
+            "BloodPressure",
+            "Glucose",
+            "Diabetes"
+        ]
+    ]
+
+
+    # Pima
+
+    pima = pima[
+        [
+            "Age",
+            "Body mass index",
+            "Blood pressure",
+            "Glucose",
+            "Outcome"
+        ]
+    ].copy()
+
+    pima.columns = [
+        "Age",
+        "BMI",
+        "BloodPressure",
+        "Glucose",
+        "Diabetes"
+    ]
+
+    pima[
+        ["BMI", "BloodPressure", "Glucose"]
+    ] = pima[
+        ["BMI", "BloodPressure", "Glucose"]
+    ].replace(0, pd.NA)
+
+    pima = pima.dropna()
+
+
+    print("\nAfter preprocessing:")
+    print("Bangladesh:", bangladesh.shape)
+    print("Iraq:", iraq.shape)
+    print("Pima:", pima.shape)
+
+
+    # Bangladesh train/test split
+
+    X_bangladesh = bangladesh[
+        ["Age", "BMI", "BloodPressure", "Glucose"]
+    ]
+
+    y_bangladesh = bangladesh["Diabetes"]
+
+    X_bangladesh_train, X_bangladesh_test, y_bangladesh_train, y_bangladesh_test = train_test_split(
+        X_bangladesh,
+        y_bangladesh,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_bangladesh
+    )
+
+
+    # Oversample Bangladesh class 1 in training data only
+
+    bangladesh_train = pd.concat([
+        X_bangladesh_train.assign(
+            Diabetes=y_bangladesh_train
+        )
+    ])
+
+    class_0 = bangladesh_train[
+        bangladesh_train["Diabetes"] == 0
+    ]
+
+    class_1 = bangladesh_train[
+        bangladesh_train["Diabetes"] == 1
+    ]
+
+    class_1_oversampled = resample(
+        class_1,
+        replace=True,
+        n_samples=len(class_0) // 3,
+        random_state=42
+    )
+
+    bangladesh_train = pd.concat([
+        class_0,
+        class_1_oversampled
+    ])
+
+    bangladesh_train = bangladesh_train.sample(
+        frac=1,
+        random_state=42
+    )
+
+    X_bangladesh_train = bangladesh_train[
+        ["Age", "BMI", "BloodPressure", "Glucose"]
+    ]
+
+    y_bangladesh_train = bangladesh_train["Diabetes"]
+
+
+    # Scale Bangladesh data
+
+    scaler_bangladesh = StandardScaler()
+
+    X_bangladesh_train = scaler_bangladesh.fit_transform(
+        X_bangladesh_train
+    )
+
+    X_bangladesh_test = scaler_bangladesh.transform(
+        X_bangladesh_test
+    )
+
+
+    # Iraq train/test split
+
+    X_iraq = iraq[
+        ["Age", "BMI", "BloodPressure", "Glucose"]
+    ]
+
+    y_iraq = iraq["Diabetes"]
+
+    X_iraq_train, X_iraq_test, y_iraq_train, y_iraq_test = train_test_split(
+        X_iraq,
+        y_iraq,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_iraq
+    )
+
+    scaler_iraq = StandardScaler()
+
+    X_iraq_train = scaler_iraq.fit_transform(
+        X_iraq_train
+    )
+
+    X_iraq_test = scaler_iraq.transform(
+        X_iraq_test
+    )
+
+
+    # Pima train/test split
+
+    X_pima = pima[
+        ["Age", "BMI", "BloodPressure", "Glucose"]
+    ]
+
+    y_pima = pima["Diabetes"]
+
+    X_pima_train, X_pima_test, y_pima_train, y_pima_test = train_test_split(
+        X_pima,
+        y_pima,
+        test_size=0.2,
+        random_state=42,
+        stratify=y_pima
+    )
+
+
+    scaler_pima = StandardScaler()
+
+    X_pima_train = scaler_pima.fit_transform(
+        X_pima_train
+    )
+
+    X_pima_test = scaler_pima.transform(
+        X_pima_test
+    )
+
+
+    # Print client information
+
+    print("\nBangladesh:")
+    print("Training:", X_bangladesh_train.shape)
+    print("Testing:", X_bangladesh_test.shape)
+    print("Class distribution:")
+    print(y_bangladesh_train.value_counts())
+
+
+    print("\nIraq:")
+    print("Training:", X_iraq_train.shape)
+    print("Testing:", X_iraq_test.shape)
+    print("Class distribution:")
+    print(y_iraq_train.value_counts())
+
+
+    print("\nPima:")
+    print("Training:", X_pima_train.shape)
+    print("Testing:", X_pima_test.shape)
+    print("Class distribution:")
+    print(y_pima_train.value_counts())
+
+
+    # Create clients
+
+    bangladesh_client = {
+        "name": "Bangladesh",
+        "X_train": X_bangladesh_train,
+        "y_train": y_bangladesh_train.to_numpy(),
+        "X_test": X_bangladesh_test,
+        "y_test": y_bangladesh_test.to_numpy()
+    }
+
+    iraq_client = {
+        "name": "Iraq",
+        "X_train": X_iraq_train,
+        "y_train": y_iraq_train.to_numpy(),
+        "X_test": X_iraq_test,
+        "y_test": y_iraq_test.to_numpy()
+    }
+
+    pima_client = {
+        "name": "Pima",
+        "X_train": X_pima_train,
+        "y_train": y_pima_train.to_numpy(),
+        "X_test": X_pima_test,
+        "y_test": y_pima_test.to_numpy()
+    }
+
+
+    return [
+        bangladesh_client,
+        iraq_client,
+        pima_client
+    ]
+
+if __name__ == "__main__":
+    load_and_preprocess()
