@@ -9,7 +9,6 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-
 # Load all three clients
 clients = load_and_preprocess()
 
@@ -79,6 +78,5 @@ for client in clients:
     print("Recall:", recall)
     print("F1-Score:", f1)
     print("ROC-AUC:", roc_auc)
-
     print("\nConfusion Matrix:")
     print(matrix)

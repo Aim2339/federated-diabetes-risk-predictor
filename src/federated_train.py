@@ -1,7 +1,6 @@
 from preprocessing import load_and_preprocess
 
 import numpy as np
-import os
 
 from sklearn.metrics import (
     accuracy_score,
@@ -12,63 +11,41 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-
-# Load the three clients
-
+# Load the clients
 clients = load_and_preprocess()
 
-
-# Logistic Regression functions
-
+# Sigmoid function
 def sigmoid(value):
-
     return 1 / (1 + np.exp(-value))
 
-
+# Local Logistic Regression training
 def train_local_model(X, y, weights, bias):
 
     learning_rate = 0.01
     local_epochs = 20
 
     for epoch in range(local_epochs):
-
-        # Calculate prediction
-
-        linear_output = np.dot(X, weights) + bias
-
-        predictions = sigmoid(linear_output)
-
-        # Calculate errors
+        predictions = sigmoid(
+            np.dot(X, weights) + bias
+        )
 
         errors = predictions - y
 
-        # Calculate gradients
-
-        weight_gradient = np.dot(X.T, errors) / len(X)
+        weight_gradient = np.dot(
+            X.T,
+            errors
+        ) / len(X)
 
         bias_gradient = np.sum(errors) / len(X)
-
-        # Update weights
-
         weights = weights - learning_rate * weight_gradient
-
-        # Update bias
-
         bias = bias - learning_rate * bias_gradient
-
     return weights, bias
 
-
 # Initialize global model
-
-number_of_features = 4
-
-global_weights = np.zeros(number_of_features)
+global_weights = np.zeros(4)
 global_bias = 0.0
 
-
 # Federated Training
-
 number_of_rounds = 10
 
 for round_number in range(number_of_rounds):
@@ -80,95 +57,48 @@ for round_number in range(number_of_rounds):
     client_sizes = []
 
     # Train each client
-
     for client in clients:
 
-        name = client["name"]
-
-        X_train = client["X_train"]
-        y_train = client["y_train"]
-
-        print("\nTraining:", name)
-
-        # Start from the current global model
+        print("\nTraining:", client["name"])
 
         local_weights = global_weights.copy()
         local_bias = global_bias
 
-        # Train locally
-
         local_weights, local_bias = train_local_model(
-            X_train,
-            y_train,
+            client["X_train"],
+            client["y_train"],
             local_weights,
             local_bias
         )
 
-        # Store local parameters
-
         client_weights.append(local_weights)
         client_biases.append(local_bias)
-
-        # Store number of training samples
-
-        client_sizes.append(len(X_train))
-
+        client_sizes.append(len(client["X_train"]))
 
     # Weighted Federated Averaging
-
     total_samples = sum(client_sizes)
 
     print("\nTotal training samples:", total_samples)
 
-    new_global_weights = np.zeros(number_of_features)
-    new_global_bias = 0.0
+    global_weights = np.zeros(4)
+    global_bias = 0.0
 
     for i in range(len(clients)):
 
         client_weight = client_sizes[i] / total_samples
 
-        new_global_weights = (
-            new_global_weights
-            + client_weight * client_weights[i]
+        global_weights += (
+            client_weight * client_weights[i]
         )
 
-        new_global_bias = (
-            new_global_bias
-            + client_weight * client_biases[i]
+        global_bias += (
+            client_weight * client_biases[i]
         )
-
-
-    # Update global model
-
-    global_weights = new_global_weights
-    global_bias = new_global_bias
 
     print("Global model updated.")
 
-
-# Save the final global model
-
-results_folder = "../results"
-
-os.makedirs(results_folder, exist_ok=True)
-
-np.save(
-    "../results/global_weights.npy",
-    global_weights
-)
-
-np.save(
-    "../results/global_bias.npy",
-    np.array([global_bias])
-)
-
-print("\nFinal global model saved.")
-
-
 # Final Global Model Evaluation
-
 print("\nFINAL GLOBAL MODEL")
-
 print("Using threshold: 0.5")
 
 all_actual_values = []
@@ -176,8 +106,7 @@ all_predictions = []
 all_probabilities = []
 
 
-# Evaluate the same global model on each client
-
+# Test the global model on each client
 for client in clients:
 
     name = client["name"]
@@ -185,12 +114,9 @@ for client in clients:
     X_test = client["X_test"]
     y_test = client["y_test"]
 
-    linear_output = (
-        np.dot(X_test, global_weights)
-        + global_bias
+    probabilities = sigmoid(
+        np.dot(X_test, global_weights) + global_bias
     )
-
-    probabilities = sigmoid(linear_output)
 
     predictions = (
         probabilities >= 0.5
@@ -200,6 +126,7 @@ for client in clients:
     all_predictions.extend(predictions)
     all_probabilities.extend(probabilities)
 
+    # Calculate metrics
     accuracy = accuracy_score(
         y_test,
         predictions
@@ -230,6 +157,8 @@ for client in clients:
         predictions
     )
 
+    # Display results
+
     print("\n" + name)
 
     print("Accuracy:", accuracy)
@@ -241,9 +170,7 @@ for client in clients:
     print("\nConfusion Matrix:")
     print(matrix)
 
-
-# Overall Final Global Model Evaluation
-
+# Overall Results
 print("\nOVERALL FINAL GLOBAL MODEL")
 
 overall_accuracy = accuracy_score(
@@ -276,11 +203,11 @@ overall_matrix = confusion_matrix(
     all_predictions
 )
 
+
 print("\nAccuracy:", overall_accuracy)
 print("Precision:", overall_precision)
 print("Recall:", overall_recall)
 print("F1-Score:", overall_f1)
 print("ROC-AUC:", overall_roc_auc)
-
 print("\nOverall Confusion Matrix:")
 print(overall_matrix)
